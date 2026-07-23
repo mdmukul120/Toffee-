@@ -1,0 +1,50 @@
+name: Toffee Auto Update Playlist
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.x"
+
+      - name: Install Dependencies
+        run: |
+          pip install requests pyzipper
+
+      - name: Load Secrets
+        run: |
+          echo "ZIP_PASSWORD=${{ secrets.ZIP_PASSWORD }}" >> $GITHUB_ENV
+          echo "BEARER_TOKEN=${{ secrets.BEARER_TOKEN }}" >> $GITHUB_ENV
+
+      - name: Extract toffee_main.zip
+        run: |
+          python toffee_unzip.py
+
+      - name: Run Toffee Script
+        run: |
+          python toffee_sm.py
+
+      - name: Cleanup temp files
+        run: |
+          rm -rf extracted || true
+          rm -rf "secret key" || true
+
+      - name: Commit Output
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add toffee_playlist.m3u toffee_data.json
+          git commit -m "🔁 Auto update Toffee playlist & json" || echo "No changes to commit"
+          git push
